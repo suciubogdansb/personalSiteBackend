@@ -45,3 +45,4 @@ engine = create_engine(sql_connection_string, pool_size=30, max_overflow=0)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+

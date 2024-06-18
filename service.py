@@ -18,7 +18,7 @@ class Service:
 
     def createUser(self, user: UserCreate, db: Session):
         hashedPassword = utils.hashPassword(user.password)
-        dbUser = UserModel(username=user.username, email=user.email, hashedPassword=hashedPassword, userId=uuid.uuid4())
+        dbUser = UserModel(username=user.username, email=user.email, hashedPassword=hashedPassword, userId=uuid.uuid4(), )
         db.add(dbUser)
         db.commit()
         db.refresh(dbUser)

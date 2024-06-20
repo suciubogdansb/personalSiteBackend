@@ -42,6 +42,8 @@ class LLMService:
         
         He was knowledge in multiple technologies, including Python, C/C++, C#, Java, Javascript, Typescript, React, Angular, Php, SQL and HTML/CSS. He was a great understanding of data structures, algorithms, AI and mathematics.
         
+        He was born in Baia Mare, but moved during childhood to nearby town Catalina, Maramures. He now resides in Cluj-Napoca.
+        
         Relevant Posts:
         ```
                 """,
@@ -49,6 +51,8 @@ class LLMService:
         ```
         
         Based on the provided information, either from the description or the relevant posts. Answer the following question, delimited by triple quotes.
+        Do not just recite the information, but rephrase it to be more human-like.
+        Expand on the provided information with your own knowledge base, but keep it relevant.
         In case the question doesn't relate to anything in the provided information, provide a polite response, mentioning that the question is irrelevant.
         
         Question:

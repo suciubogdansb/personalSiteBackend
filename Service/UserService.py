@@ -7,21 +7,21 @@ from schemas.User import UserCreate, Login
 
 
 class UserService:
-    def __init__(self):
-        self.repository = UserRepository()
+    def __init__(self, repository: UserRepository = None):
+        self.__repository = repository if repository is not None else UserRepository()
 
     def authenticateUser(self, user: UserCreate):
-        if self.repository.getUserByEmail(user.email) is not None:
+        if self.__repository.getUserByEmail(user.email) is not None:
             raise UserException("Email address already exists")
-        if self.repository.getUserByUsername(user.username) is not None:
+        if self.__repository.getUserByUsername(user.username) is not None:
             raise UserException("Username already exists")
-        dbUser = self.repository.createUser(user)
+        dbUser = self.__repository.createUser(user)
         token = utils.encodeUserToJWT(dbUser)
         userDto = utils.userToDTO(dbUser)
         return token, userDto
 
     def loginUser(self, loginCredentials: Login):
-        dbUser = self.repository.checkForIdentifier(loginCredentials.username)
+        dbUser = self.__repository.checkForIdentifier(loginCredentials.username)
         if dbUser is None:
             raise UserException("User and password do not match")
         if not utils.checkPassword(loginCredentials.password, dbUser.hashedPassword):
@@ -30,21 +30,21 @@ class UserService:
         return token, dbUser.role
 
     def getUsers(self):
-        users = self.repository.getUsers()
+        users = self.__repository.getUsers()
         return [utils.userToDTO(user) for user in users]
 
     def promoteUser(self, userId: str):
-        user = self.repository.getUserById(uuid.UUID(userId))
+        user = self.__repository.getUserById(uuid.UUID(userId))
         if user is None:
             raise UserException("User not found")
-        user = self.repository.makeUserAdmin(user.userId)
+        user = self.__repository.makeUserAdmin(user.userId)
         return utils.userToDTO(user)
 
     def deleteUser(self, userId: str):
-        user = self.repository.getUserById(uuid.UUID(userId))
+        user = self.__repository.getUserById(uuid.UUID(userId))
         if user is None:
             raise UserException("User not found")
-        user = self.repository.deleteUser(user.userId)
+        user = self.__repository.deleteUser(user.userId)
         return utils.userToDTO(user)
 
 

@@ -6,35 +6,37 @@ from fastapi import UploadFile
 import utils
 from Repository.PostRepository import PostRepository
 from Repository.UserRepository import UserRepository
+from Service.LLMService import LLMService
 from schemas.Post import PostCreate
 
 
 class PostService:
 
-    def __init__(self):
-        self.repository = PostRepository()
-        self.userRepository = UserRepository()
+    def __init__(self, repository: PostRepository = None,
+                 userRepository: UserRepository = None):
+        self.__repository = repository if repository is not None else PostRepository()
+        self.__userRepository = userRepository if userRepository is not None else UserRepository()
 
         self.__filterOptions = {
-            "Default": self.repository.getPostsFiltered,
-            "A->Z": self.repository.getPostsSortedByTitle,
-            "Z->A": self.repository.getPostsSortedByTitleDesc,
-            "Oldest": self.repository.getPostsSortedByAge,
-            "Newest": self.repository.getPostsSortedByAgeDesc
+            "Default": self.__repository.getPostsFiltered,
+            "A->Z": self.__repository.getPostsSortedByTitle,
+            "Z->A": self.__repository.getPostsSortedByTitleDesc,
+            "Oldest": self.__repository.getPostsSortedByAge,
+            "Newest": self.__repository.getPostsSortedByAgeDesc
         }
 
     def getAll(self):
-        posts = self.repository.getPosts()
+        posts = self.__repository.getPosts()
         return [utils.postToDTO(post) for post in posts]
 
     def getById(self, id: UUID):
-        post = self.repository.getPostById(id)
+        post = self.__repository.getPostById(id)
         if not post:
             raise Exception("Post not found")
         return utils.postToDTO(post)
 
     def getByUserId(self, id: UUID):
-        return self.repository.getPostsByUserId(id)
+        return self.__repository.getPostsByUserId(id)
 
     async def createPost(self, token: str, title: str, content: str, image: UploadFile):
         try:
@@ -44,7 +46,7 @@ class PostService:
 
         postId = uuid.uuid4()
 
-        user = self.userRepository.getUserById(uuid.UUID(userPayload["userId"]))
+        user = self.__userRepository.getUserById(uuid.UUID(userPayload["userId"]))
         if not user:
             raise Exception("User not found")
 
@@ -59,20 +61,20 @@ class PostService:
                 image_file.write(imageContent)
 
         post = PostCreate(title=title, content=content, userId=userPayload["userId"], filepath=filepath)
-        dbPost = self.repository.addPost(post, postId)
+        dbPost = self.__repository.addPost(post, postId)
         return utils.postToDTO(dbPost)
 
     def deletePost(self, postId: UUID):
-        post = self.repository.deletePost(postId)
+        post = self.__repository.deletePost(postId)
 
     def getImage(self, postId: UUID):
-        post = self.repository.getPostById(postId)
+        post = self.__repository.getPostById(postId)
         if not post:
             raise Exception("Post not found")
         return post.filePath
 
     async def updatePost(self, postId: UUID, token: str, title: str, content: str, image: UploadFile):
-        post = self.repository.getPostById(postId)
+        post = self.__repository.getPostById(postId)
         if not post:
             raise Exception("Post not found")
 
@@ -81,7 +83,7 @@ class PostService:
         except Exception as e:
             raise Exception(str(e))
 
-        user = self.userRepository.getUserById(uuid.UUID(userPayload["userId"]))
+        user = self.__userRepository.getUserById(uuid.UUID(userPayload["userId"]))
         if not user:
             raise Exception("User not found")
 
@@ -99,17 +101,11 @@ class PostService:
                 image_file.write(imageContent)
 
         post = PostCreate(title=title, content=content, userId=userPayload["userId"], filepath=filepath)
-        dbPost = self.repository.updatePost(post, postId)
+        dbPost = self.__repository.updatePost(post, postId)
         return utils.postToDTO(dbPost)
 
     def getPostsByFilter(self, filtered, option):
-        print("Filter: ", filtered)
         if option not in self.__filterOptions:
             raise Exception("Invalid filter option")
-        print("Option: ", option)
         posts = self.__filterOptions[option](filtered)
-        print("Posts: ", posts)
         return [utils.postToDTO(post) for post in posts]
-
-
-

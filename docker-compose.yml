@@ -1,0 +1,23 @@
+version: "3"
+
+volumes:
+  data:
+
+services:
+  app:
+    container_name: "GabiMircea"
+    build:
+        context: .
+        dockerfile: Dockerfile
+
+    expose:
+      - 8000:8000
+
+    ports:
+      - 8000:8000
+
+    restart: unless-stopped
+
+    volumes:
+      - data:/app/data
+

@@ -2,18 +2,26 @@ import os
 import uuid
 
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Form, UploadFile, File
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
+from Repository.PostRepository import PostRepository
+from Repository.UserRepository import UserRepository
 from Service.PostService import PostService
 from Service.UserService import UserService
+from Service.LLMService import LLMService
 from databaseManagement.database import engine
 from databaseManagement.models import models
+from schemas.BotResponse import BotResponse
 from schemas.User import User, UserCreate, Login
 from schemas.Post import PostWithUser
 import socketio
+
+load_dotenv()
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -54,7 +62,10 @@ def check():
     return {"message": "Ok"}
 
 
-userService = UserService()
+userRepository = UserRepository()
+postRepository = PostRepository()
+
+userService = UserService(repository=userRepository)
 
 
 @app.post("/authenticate")
@@ -140,7 +151,10 @@ async def deleteUser(userId: str):
 #     ]
 #     return postsSchemas
 
-postService = PostService()
+
+llmService = LLMService(postRepository=postRepository)
+
+postService = PostService(repository=postRepository, userRepository=userRepository)
 
 
 @app.get("/posts", response_model=list[PostWithUser])
@@ -166,6 +180,7 @@ async def addPost(token: str = Form(...),
     try:
         post = await postService.createPost(token, title, content, image)
         await socketIo.emit("postCreated", {"post": post.toJSON()})
+        llmService.reloadChain()
         return post
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -176,6 +191,7 @@ async def deletePost(postId: str):
     try:
         postService.deletePost(uuid.UUID(postId))
         await socketIo.emit("postDeleted", {"postId": postId})
+        llmService.reloadChain()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -190,6 +206,7 @@ async def updatePost(postId: str,
     try:
         post = await postService.updatePost(uuid.UUID(postId), token, title, content, image)
         await socketIo.emit("postUpdated", {"post": post.toJSON()})
+        llmService.reloadChain()
         return post
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -211,6 +228,16 @@ def getPostsByFilter(option: str, filtered: str = ""):
     try:
         posts = postService.getPostsByFilter(filtered, option)
         return posts
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/chat", response_model=BotResponse)
+async def chat(request: BotResponse):
+    try:
+        response = await llmService.getResponse(request.message)
+        botResponse = BotResponse(message=response, role="bot")
+        return botResponse
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

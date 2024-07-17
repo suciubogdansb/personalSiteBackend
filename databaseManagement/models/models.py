@@ -1,4 +1,5 @@
 import datetime
+import uuid
 
 from sqlalchemy import Column, UUID, String, ForeignKey, Enum, DateTime
 from sqlalchemy.orm import relationship
@@ -30,3 +31,13 @@ class PostModel(Base):
     userId = Column(UUID, ForeignKey("users.userId", onupdate="CASCADE", ondelete="CASCADE"), index=True)
 
     user = relationship("UserModel", back_populates="posts")
+
+
+class ContactModel(Base):
+    __tablename__ = "contacts"
+
+    contactId = Column(UUID, primary_key=True, default=uuid.uuid4)
+    name = Column(String)
+    email = Column(String)
+    message = Column(String)
+    creationDate = Column(DateTime, default=datetime.datetime.utcnow)

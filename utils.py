@@ -1,11 +1,14 @@
+import json
+
 import bcrypt
 
-from databaseManagement.models.models import UserModel, PostModel
+from databaseManagement.models.models import UserModel, PostModel, ContactModel
 
 import dotenv
 import os
 import jwt
 
+from schemas.Contact import Contact
 from schemas.Post import PostWithUser
 from schemas.User import User
 
@@ -44,3 +47,17 @@ def postToDTO(post: PostModel) -> PostWithUser:
     return PostWithUser(postId=str(post.postId), title=post.title, content=post.content,
                         creationDate=post.creationDate,
                         filepath=post.filePath, username=post.user.username, userId=str(post.userId))
+
+
+def contactToDTO(contact: ContactModel):
+    return Contact(contactId=str(contact.contactId), name=contact.name, email=contact.email, message=contact.message,
+                   creationDate=contact.creationDate)
+
+
+def getTextFromPostContent(content: str) -> str:
+    jsonContent = json.loads(content)
+    text = ""
+    for block in jsonContent["blocks"]:
+        if block["text"]:
+            text += block["text"] + "\n"
+    return text

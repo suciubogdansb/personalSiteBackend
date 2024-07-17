@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 
@@ -8,14 +9,17 @@ from starlette.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
+from Repository.ContactRepository import ContactRepository
 from Repository.PostRepository import PostRepository
 from Repository.UserRepository import UserRepository
+from Service.ContactService import ContactService
 from Service.PostService import PostService
 from Service.UserService import UserService
 from Service.LLMService import LLMService
 from databaseManagement.database import engine
 from databaseManagement.models import models
 from schemas.BotResponse import BotResponse
+from schemas.Contact import Contact, ContactBase
 from schemas.User import User, UserCreate, Login
 from schemas.Post import PostWithUser
 import socketio
@@ -180,7 +184,7 @@ async def addPost(token: str = Form(...),
     try:
         post = await postService.createPost(token, title, content, image)
         await socketIo.emit("postCreated", {"post": post.toJSON()})
-        llmService.reloadChain()
+        asyncio.create_task(llmService.reloadChain())
         return post
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -191,7 +195,7 @@ async def deletePost(postId: str):
     try:
         postService.deletePost(uuid.UUID(postId))
         await socketIo.emit("postDeleted", {"postId": postId})
-        llmService.reloadChain()
+        asyncio.create_task(llmService.reloadChain())
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -206,7 +210,7 @@ async def updatePost(postId: str,
     try:
         post = await postService.updatePost(uuid.UUID(postId), token, title, content, image)
         await socketIo.emit("postUpdated", {"post": post.toJSON()})
-        llmService.reloadChain()
+        asyncio.create_task(llmService.reloadChain())
         return post
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -240,6 +244,21 @@ async def chat(request: BotResponse):
         return botResponse
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+contactRepository = ContactRepository()
+contactService = ContactService(repository=contactRepository)
+
+
+@app.get("/contacts", response_model=list[Contact])
+def getContacts():
+    contacts = contactService.getAll()
+    return contacts
+
+
+@app.post("/contacts", response_model=Contact)
+def addContact(contact: ContactBase):
+    return contactService.addContact(contact)
 
 
 socketApp = socketio.ASGIApp(socketIo, app)
